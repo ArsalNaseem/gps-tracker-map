@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live GPS Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <strong>📍 Live GPS Tracker</strong><br>
+    Lat: <span id="lat">--</span><br>
+    Lon: <span id="lon">--</span><br>
+    Time: <span id="time">--</span>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    const marker = L.marker([0, 0]).addTo(map);
+    const polyline = L.polyline([]).addTo(map);
+    const path = [];
+
+    async function fetchLocation() {
+      try {
+        const response = await fetch('/latest');
+        const data = await response.json();
+
+        if (data.lat && data.lon) {
+          const lat = parseFloat(data.lat);
+          const lon = parseFloat(data.lon);
+          const time = data.timestamp || '--';
+
+          document.getElementById('lat').textContent = lat.toFixed(6);
+          document.getElementById('lon').textContent = lon.toFixed(6);
+          document.getElementById('time').textContent = time;
+
+          const latlng = [lat, lon];
+          marker.setLatLng(latlng);
+          map.setView(latlng, 15);
+
+          path.push(latlng);
+          polyline.setLatLngs(path);
+        }
+      } catch (err) {
+        console.error("Failed to fetch location:", err);
+      }
+    }
+
+    fetchLocation();
+    setInterval(fetchLocation, 5000);
+  </script>
+</body>
+</html>
