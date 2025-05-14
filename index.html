@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live GPS Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    .geofence-status {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      font-weight: bold;
+      font-family: sans-serif;
+      border-radius: 8px;
+      z-index: 1000;
+      display: block;
+      font-size: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    .safe {
+      background-color: #28a745;
+      color: white;
+    }
+    .danger {
+      background-color: #dc3545;
+      color: white;
+    }
+    .coord-display {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.15);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div id="geofenceStatus" class="geofence-status safe">✅ INSIDE SAFE ZONE</div>
+  <div id="coordDisplay" class="coord-display"></div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([33.744078, 72.786381], 20);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = L.marker([33.744078, 72.786381]).addTo(map);
+    let path = L.polyline([], { color: 'blue' }).addTo(map);
+
+    // Draw geofence circle
+    const geofenceCenter = [33.744078, 72.786381];
+    L.circle(geofenceCenter, {
+      radius: 10,
+      color: 'red',
+      fillOpacity: 0.1
+    }).addTo(map);
+
+    function updateMap() {
+      fetch('/latest')
+        .then(res => res.json())
+        .then(data => {
+          const { latitude, longitude, timestamp, geofence_status } = data;
+          const latlng = [latitude, longitude];
+
+          marker.setLatLng(latlng);
+          path.addLatLng(latlng);
+          map.panTo(latlng);
+
+          const statusDiv = document.getElementById('geofenceStatus');
+          if (geofence_status === "OUTSIDE GEOFENCE RANGE") {
+            statusDiv.innerText = "⚠ OUTSIDE GEOFENCE RANGE";
+            statusDiv.className = "geofence-status danger";
+          } else {
+            statusDiv.innerText = "✅ INSIDE SAFE ZONE";
+            statusDiv.className = "geofence-status safe";
+          }
+
+          document.getElementById('coordDisplay').innerText =
+            `📍 Lat: ${latitude.toFixed(6)} | Lon: ${longitude.toFixed(6)} | 🕒 ${timestamp}`;
+        })
+        .catch(err => console.error("Error fetching location:", err));
+    }
+
+    updateMap();
+    setInterval(updateMap, 3000);
+  </script>
+</body>
+</html>
