@@ -2,12 +2,27 @@ from flask import Flask, request, jsonify, send_from_directory
 from datetime import datetime
 import json
 from math import radians, sin, cos, sqrt, atan2
+import os
 
 app = Flask(__name__)
 
-# Define geofence center and radius (real)
-GEOFENCE_CENTER = (33.744078, 72.786381)  # Update if needed
-GEOFENCE_RADIUS = 10  # in meters
+# File to store geofence config
+GEOFENCE_FILE = "geofence.json"
+LATEST_FILE = "latest.json"
+
+def load_geofence():
+    if os.path.exists(GEOFENCE_FILE):
+        with open(GEOFENCE_FILE, 'r') as f:
+            return json.load(f)
+    return {
+        "lat": 33.744078,
+        "lon": 72.786381,
+        "radius": 10
+    }
+
+def save_geofence(data):
+    with open(GEOFENCE_FILE, 'w') as f:
+        json.dump(data, f)
 
 def is_outside_geofence(lat, lon, center_lat, center_lon, radius_meters):
     R = 6371000  # Earth radius in meters
@@ -18,15 +33,19 @@ def is_outside_geofence(lat, lon, center_lat, center_lon, radius_meters):
     distance = R * c
     return distance > radius_meters
 
-@app.route('/Mapapi/track.php', methods=['GET'])
+@app.route('/Mapapi/server.py', methods=['GET'])
 def receive_coordinates():
     try:
         lat = float(request.args.get('lat'))
         lon = float(request.args.get('lon'))
 
+        geofence = load_geofence()
+        center_lat, center_lon = geofence["lat"], geofence["lon"]
+        radius = geofence["radius"]
+
         status_msg = (
             "OUTSIDE GEOFENCE RANGE"
-            if is_outside_geofence(lat, lon, *GEOFENCE_CENTER, GEOFENCE_RADIUS)
+            if is_outside_geofence(lat, lon, center_lat, center_lon, radius)
             else "INSIDE SAFE ZONE"
         )
 
@@ -37,7 +56,7 @@ def receive_coordinates():
             "geofence_status": status_msg
         }
 
-        with open("latest.json", "w") as f:
+        with open(LATEST_FILE, "w") as f:
             json.dump(data, f)
 
         return jsonify({"status": "OK", "message": "Coordinates received"}), 200
@@ -45,10 +64,23 @@ def receive_coordinates():
     except Exception as e:
         return jsonify({"status": "FAIL", "error": str(e)}), 400
 
+@app.route('/Mapapi/set_geofence', methods=['POST'])
+def set_geofence():
+    try:
+        content = request.get_json()
+        save_geofence({
+            "lat": float(content['lat']),
+            "lon": float(content['lon']),
+            "radius": float(content.get('radius', 10))
+        })
+        return jsonify({"status": "OK", "message": "Geofence updated"})
+    except Exception as e:
+        return jsonify({"status": "FAIL", "error": str(e)}), 400
+
 @app.route('/Mapapi/latest')
 def get_latest():
     try:
-        with open("latest.json", "r") as f:
+        with open(LATEST_FILE, "r") as f:
             data = json.load(f)
         return jsonify(data)
     except Exception as e:
