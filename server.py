@@ -1,10 +1,13 @@
 from flask import Flask, request, jsonify, send_from_directory
 from datetime import datetime
 import json
-import os
 from math import radians, sin, cos, sqrt, atan2
 
 app = Flask(__name__)
+
+# Define geofence center and radius (real)
+GEOFENCE_CENTER = (33.744078, 72.786381)  # Update if needed
+GEOFENCE_RADIUS = 10  # in meters
 
 def is_outside_geofence(lat, lon, center_lat, center_lon, radius_meters):
     R = 6371000  # Earth radius in meters
@@ -21,10 +24,11 @@ def receive_coordinates():
         lat = float(request.args.get('lat'))
         lon = float(request.args.get('lon'))
 
-        geofence_center = (33.744078, 72.786381)
-        geofence_radius = 10  # meters
-
-        status_msg = "OUTSIDE GEOFENCE RANGE" if is_outside_geofence(lat, lon, *geofence_center, geofence_radius) else "INSIDE SAFE ZONE"
+        status_msg = (
+            "OUTSIDE GEOFENCE RANGE"
+            if is_outside_geofence(lat, lon, *GEOFENCE_CENTER, GEOFENCE_RADIUS)
+            else "INSIDE SAFE ZONE"
+        )
 
         data = {
             "latitude": lat,
