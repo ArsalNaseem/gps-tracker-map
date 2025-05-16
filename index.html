@@ -49,12 +49,26 @@
       box-shadow: 0 0 8px rgba(0,0,0,0.15);
       z-index: 1000;
     }
+    .instructions {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #ffffffee;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-family: sans-serif;
+      font-size: 14px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <div id="geofenceStatus" class="geofence-status safe">✅ INSIDE SAFE ZONE</div>
   <div id="coordDisplay" class="coord-display"></div>
   <div id="map"></div>
+  <div class="instructions">🖱 Click on the map to set geofence center (10m radius)</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -66,17 +80,43 @@
 
     let marker = L.marker([33.744078, 72.786381]).addTo(map);
     let path = L.polyline([], { color: 'blue' }).addTo(map);
+    let geofenceCircle = null;
 
-    // Draw geofence circle
-    const geofenceCenter = [33.744078, 72.786381];
-    L.circle(geofenceCenter, {
-      radius: 10,
-      color: 'red',
-      fillOpacity: 0.1
-    }).addTo(map);
+    let geofenceCenter = [33.744078, 72.786381];
+    let geofenceRadius = 10;
+
+    function drawGeofence(center, radius) {
+      if (geofenceCircle) map.removeLayer(geofenceCircle);
+      geofenceCircle = L.circle(center, {
+        radius: radius,
+        color: 'red',
+        fillOpacity: 0.1
+      }).addTo(map);
+    }
+
+    function setGeofence(lat, lon, radius) {
+      fetch('/Mapapi/set_geofence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lon, radius })
+      })
+      .then(res => res.json())
+      .then(res => console.log("Geofence set:", res))
+      .catch(err => console.error("Failed to set geofence:", err));
+    }
+
+    map.on('click', function(e) {
+      const newCenter = [e.latlng.lat, e.latlng.lng];
+      geofenceCenter = newCenter;
+      geofenceRadius = 10; // You can add a prompt or slider for dynamic radius
+      drawGeofence(geofenceCenter, geofenceRadius);
+      setGeofence(e.latlng.lat, e.latlng.lng, geofenceRadius);
+    });
+
+    drawGeofence(geofenceCenter, geofenceRadius);
 
     function updateMap() {
-      fetch('/latest')
+      fetch('/Mapapi/latest')
         .then(res => res.json())
         .then(data => {
           const { latitude, longitude, timestamp, geofence_status } = data;
