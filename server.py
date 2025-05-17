@@ -92,6 +92,40 @@ def get_latest():
 def serve_index():
     return send_from_directory('.', 'index.html')
 
+@app.route('/Mapapi/server.py', methods=['GET'])
+def receive_coordinates():
+    try:
+        lat = float(request.args.get('lat'))
+        lon = float(request.args.get('lon'))
+        msg = request.args.get('msg', '')  # ✅ Optional message
+
+        geofence = load_geofence()
+        center_lat, center_lon = geofence["lat"], geofence["lon"]
+        radius = geofence["radius"]
+
+        status_msg = (
+            "OUTSIDE GEOFENCE RANGE"
+            if is_outside_geofence(lat, lon, center_lat, center_lon, radius)
+            else "INSIDE SAFE ZONE"
+        )
+
+        data = {
+            "latitude": lat,
+            "longitude": lon,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "geofence_status": status_msg,
+            "message": msg  # ✅ Save message
+        }
+
+        with open(LATEST_FILE, "w") as f:
+            json.dump(data, f)
+
+        return jsonify({"status": "OK", "message": "Coordinates received"}), 200
+
+    except Exception as e:
+        return jsonify({"status": "FAIL", "error": str(e)}), 400
+
+
 # --- RUN SERVER ---
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
