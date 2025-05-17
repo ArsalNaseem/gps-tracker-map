@@ -11,14 +11,27 @@ GEOFENCE_FILE = "geofence.json"
 LATEST_FILE = "latest.json"
 
 def load_geofence():
+    # Try to load user-defined geofence settings (if set manually on the map)
     if os.path.exists(GEOFENCE_FILE):
         with open(GEOFENCE_FILE, 'r') as f:
             return json.load(f)
-    return {
-        "lat": 33.744078,
-        "lon": 72.786381,
-        "radius": 10
-    }
+
+    # Else, fallback to use Arduino's last sent location as geofence center
+    try:
+        with open("latest.json", "r") as f:
+            data = json.load(f)
+            return {
+                "lat": data["latitude"],
+                "lon": data["longitude"],
+                "radius": 10  # default radius if not set from UI
+            }
+    except Exception:
+        # Fallback to a default location if nothing exists yet
+        return {
+            "lat": 33.744078,
+            "lon": 72.786381,
+            "radius": 10
+        }
 
 def save_geofence(data):
     with open(GEOFENCE_FILE, 'w') as f:
