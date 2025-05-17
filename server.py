@@ -6,31 +6,26 @@ import os
 
 app = Flask(__name__)
 
-# File to store geofence config
 GEOFENCE_FILE = "geofence.json"
 LATEST_FILE = "latest.json"
 
 def load_geofence():
-    # Try to load user-defined geofence settings (if set manually on the map)
     if os.path.exists(GEOFENCE_FILE):
         with open(GEOFENCE_FILE, 'r') as f:
             return json.load(f)
-
-    # Else, fallback to use Arduino's last sent location as geofence center
     try:
         with open("latest.json", "r") as f:
             data = json.load(f)
             return {
                 "lat": data["latitude"],
                 "lon": data["longitude"],
-                "radius": 10  # default radius if not set from UI
+                "radius": 50
             }
     except Exception:
-        # Fallback to a default location if nothing exists yet
         return {
             "lat": 33.744078,
             "lon": 72.786381,
-            "radius": 10
+            "radius": 50
         }
 
 def save_geofence(data):
@@ -38,7 +33,7 @@ def save_geofence(data):
         json.dump(data, f)
 
 def is_outside_geofence(lat, lon, center_lat, center_lon, radius_meters):
-    R = 6371000  # Earth radius in meters
+    R = 6371000
     dlat = radians(lat - center_lat)
     dlon = radians(lon - center_lon)
     a = sin(dlat / 2)**2 + cos(radians(center_lat)) * cos(radians(lat)) * sin(dlon / 2)**2
@@ -51,6 +46,7 @@ def receive_coordinates():
     try:
         lat = float(request.args.get('lat'))
         lon = float(request.args.get('lon'))
+        msg = request.args.get('msg', '')
 
         geofence = load_geofence()
         center_lat, center_lon = geofence["lat"], geofence["lon"]
@@ -66,7 +62,8 @@ def receive_coordinates():
             "latitude": lat,
             "longitude": lon,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "geofence_status": status_msg
+            "geofence_status": status_msg,
+            "message": msg
         }
 
         with open(LATEST_FILE, "w") as f:
