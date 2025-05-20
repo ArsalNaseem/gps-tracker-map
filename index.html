@@ -83,7 +83,7 @@
     let geofenceCircle = null;
 
     let geofenceCenter = [33.744078, 72.786381];
-    let geofenceRadius = 50;
+    let geofenceRadius = 80;
 
     function drawGeofence(center, radius) {
       if (geofenceCircle) map.removeLayer(geofenceCircle);
@@ -108,7 +108,7 @@
     map.on('click', function(e) {
       const newCenter = [e.latlng.lat, e.latlng.lng];
       geofenceCenter = newCenter;
-      geofenceRadius = 10; // You can add a prompt or slider for dynamic radius
+      geofenceRadius = 80; // You can add a prompt or slider for dynamic radius
       drawGeofence(geofenceCenter, geofenceRadius);
       setGeofence(e.latlng.lat, e.latlng.lng, geofenceRadius);
     });
