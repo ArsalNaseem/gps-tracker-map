@@ -19,13 +19,13 @@ def load_geofence():
             return {
                 "lat": data["latitude"],
                 "lon": data["longitude"],
-                "radius": 80
+                "radius": 20
             }
     except Exception:
         return {
             "lat": 33.744078,
             "lon": 72.786381,
-            "radius": 80
+            "radius": 20
         }
 
 def save_geofence(data):
